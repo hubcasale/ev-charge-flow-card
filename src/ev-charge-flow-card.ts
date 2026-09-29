@@ -8,7 +8,7 @@ import type { CardConfig, HomeAssistant, ModuleConfig } from "./types";
 import { DEFAULT_MODULES } from "./types";
 
 const CARD_TAG = "ev-charge-flow-card";
-const CARD_VERSION = "0.4.0";
+const CARD_VERSION = "0.5.0";
 
 /**
  * A single Lovelace card bundling the visuals of an EV charging session: a

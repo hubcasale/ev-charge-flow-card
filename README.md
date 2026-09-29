@@ -17,15 +17,19 @@ unit they report (W or kW) — no need to convert anything yourself.
 
 ## Screenshot
 
-_(coming once the module set is far enough along to be worth a picture)_
+![The card in a real dashboard: battery %, power reaching the battery, wallbox power and efficiency, the energy-flow diagram, then the stats grid](docs/screenshot.png)
 
 ## Installation
 
-### HACS (once published)
+### HACS
 
-1. HACS → the three-dot menu → **Custom repositories** → add this
-   repository's URL, category **Dashboard**.
-2. Install **EV Charge Flow Card**.
+Not yet in HACS's default list (see [Roadmap](#roadmap)), so add it as a
+custom repository for now:
+
+1. HACS → the three-dot menu → **Custom repositories** → paste
+   `https://github.com/hubcasale/ev-charge-flow-card`, category
+   **Dashboard**.
+2. Install **EV Charge Flow Card**. HACS registers the resource for you.
 3. Add the card to a dashboard (see [Configuration](#configuration)).
 
 ### Manual
@@ -121,7 +125,10 @@ instead; this module isn't trying to replace it.
 - [x] Visual config editor (entity pickers, enable/reorder modules)
 - [x] Energy-flow module (solar/grid/home-battery → car, built from
       scratch — no dependency on another custom card)
-- [ ] HACS listing
+- [x] Installable as a HACS custom repository (passes `hacs/action`
+      validation, tagged releases)
+- [ ] Accepted into HACS's default repository list (so it shows up in
+      HACS search without adding this repo's URL by hand first)
 
 ## Development
 

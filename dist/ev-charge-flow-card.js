@@ -1242,7 +1242,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.4.0";
+var CARD_VERSION = "0.5.0";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {
