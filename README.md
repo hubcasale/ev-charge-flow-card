@@ -10,7 +10,7 @@ entity you choose in the config, and the card quietly hides whatever part it
 can't compute from what you've given it. Power sensors are read in whatever
 unit they report (W or kW) — no need to convert anything yourself.
 
-> 🚧 **Early days.** Only the gauge module exists so far (see
+> 🚧 **Early days.** Gauge and stats exist so far (see
 > [Roadmap](#roadmap)). The config schema below is the target shape; fields
 > for modules that don't exist yet are accepted (so your config keeps
 > working later) but have no visible effect until that module lands.
@@ -58,9 +58,9 @@ entities:
 modules:
   - type: gauge
     enabled: true
-  - type: energy_flow # not implemented yet — accepted, has no effect
+  - type: stats
     enabled: true
-  - type: stats # not implemented yet — accepted, has no effect
+  - type: energy_flow # not implemented yet — accepted, has no effect
     enabled: true
   - type: controls # not implemented yet — accepted, has no effect
     enabled: false
@@ -83,10 +83,18 @@ arc reaches is, visually, the conversion loss between the two. Centre reads,
 top to bottom: battery %, power reaching the battery (big), wallbox power
 and the resulting efficiency % (small).
 
+### The stats grid, briefly
+
+Up to three tiles — energy, duration, cost — each shown only if it can be
+computed. Cost comes straight from `session_cost` if you have that sensor;
+otherwise, given `session_energy` and `energy_cost_per_kwh` (a literal price
+or an entity — a `input_number` you adjust by hand works fine), the card
+multiplies them itself. The currency symbol follows `hass.config.currency`.
+
 ## Roadmap
 
 - [x] Gauge module
-- [ ] Stats module (session energy / time / cost tiles)
+- [x] Stats module (session energy / time / cost tiles)
 - [ ] Visual config editor (entity pickers, drag-to-reorder modules)
 - [ ] Energy-flow module (grid → wallbox → battery, built from scratch —
       no dependency on another custom card)

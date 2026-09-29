@@ -619,6 +619,14 @@ function stateWatts(hass, entityId) {
   if (unit === "kw") return v2 * 1e3;
   return v2;
 }
+function resolveNumberOrEntityRaw(hass, value, fallback) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const v2 = stateNum(hass, value);
+    if (v2 !== void 0) return v2;
+  }
+  return fallback;
+}
 function resolveNumberOrEntity(hass, value, fallback) {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
@@ -629,6 +637,47 @@ function resolveNumberOrEntity(hass, value, fallback) {
 }
 function clamp(v2, lo, hi) {
   return Math.min(hi, Math.max(lo, v2));
+}
+function stateKwh(hass, entityId) {
+  if (!entityId) return void 0;
+  const st = hass.states[entityId];
+  if (!st) return void 0;
+  const v2 = parseFloat(st.state);
+  if (!Number.isFinite(v2)) return void 0;
+  const unit = (st.attributes.unit_of_measurement || "").toLowerCase();
+  if (unit === "wh") return v2 / 1e3;
+  return v2;
+}
+function stateSeconds(hass, entityId) {
+  if (!entityId) return void 0;
+  const st = hass.states[entityId];
+  if (!st) return void 0;
+  const v2 = parseFloat(st.state);
+  if (!Number.isFinite(v2)) return void 0;
+  const unit = (st.attributes.unit_of_measurement || "").toLowerCase();
+  if (unit === "ms") return v2 / 1e3;
+  if (unit === "min") return v2 * 60;
+  if (unit === "h") return v2 * 3600;
+  return v2;
+}
+function formatDuration(totalSeconds) {
+  const s4 = Math.max(0, Math.round(totalSeconds));
+  const hh = Math.floor(s4 / 3600);
+  const mm = Math.floor(s4 % 3600 / 60);
+  const ss = s4 % 60;
+  const pad = (n5) => String(n5).padStart(2, "0");
+  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
+var CURRENCY_SYMBOLS = {
+  EUR: "\u20AC",
+  USD: "$",
+  GBP: "\xA3",
+  CHF: "CHF"
+};
+function currencySymbol(hass) {
+  const code = hass.config?.currency;
+  if (code && CURRENCY_SYMBOLS[code]) return CURRENCY_SYMBOLS[code];
+  return code ?? "\u20AC";
 }
 
 // src/modules/gauge-ring.ts
@@ -796,6 +845,86 @@ EcfGaugeRing = __decorateClass([
   t3("ecf-gauge-ring")
 ], EcfGaugeRing);
 
+// src/modules/stats-grid.ts
+var EcfStatsGrid = class extends i4 {
+  constructor() {
+    super(...arguments);
+    this.entities = {};
+    this.config = { type: "stats" };
+  }
+  _tile(icon, value, label) {
+    return b2`
+      <div class="tile">
+        <ha-icon icon=${icon}></ha-icon>
+        <div class="value">${value}</div>
+        <div class="label">${label}</div>
+      </div>
+    `;
+  }
+  render() {
+    if (!this.hass) return A;
+    const e5 = this.entities;
+    const energyKwh = stateKwh(this.hass, e5.session_energy);
+    const seconds = stateSeconds(this.hass, e5.session_time);
+    let cost = stateNum(this.hass, e5.session_cost);
+    if (cost === void 0 && energyKwh !== void 0 && e5.energy_cost_per_kwh !== void 0) {
+      const price = resolveNumberOrEntityRaw(this.hass, e5.energy_cost_per_kwh);
+      if (price !== void 0) cost = energyKwh * price;
+    }
+    const tiles = [
+      energyKwh !== void 0 ? this._tile("mdi:lightning-bolt-outline", `${energyKwh.toFixed(2)} kWh`, "Energia") : A,
+      seconds !== void 0 ? this._tile("mdi:timer-outline", formatDuration(seconds), "Tempo") : A,
+      cost !== void 0 ? this._tile("mdi:currency-usd", `${cost.toFixed(2)} ${currencySymbol(this.hass)}`, "Costo") : A
+    ].filter((t4) => t4 !== A);
+    if (tiles.length === 0) return A;
+    return b2`<div class="grid">${tiles}</div>`;
+  }
+};
+EcfStatsGrid.styles = i`
+    :host {
+      display: block;
+    }
+    .grid {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      gap: 8px;
+      padding: 0 8px 8px;
+    }
+    .tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 2px;
+    }
+    ha-icon {
+      color: var(--secondary-text-color);
+      margin-bottom: 2px;
+    }
+    .value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary-text-color);
+    }
+    .label {
+      font-size: 11px;
+      color: var(--secondary-text-color);
+    }
+  `;
+__decorateClass([
+  n4({ attribute: false })
+], EcfStatsGrid.prototype, "hass", 2);
+__decorateClass([
+  n4({ attribute: false })
+], EcfStatsGrid.prototype, "entities", 2);
+__decorateClass([
+  n4({ attribute: false })
+], EcfStatsGrid.prototype, "config", 2);
+EcfStatsGrid = __decorateClass([
+  t3("ecf-stats-grid")
+], EcfStatsGrid);
+
 // src/types.ts
 var DEFAULT_MODULES = [
   { type: "gauge", enabled: true },
@@ -806,7 +935,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.1.0";
+var CARD_VERSION = "0.2.0";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {
@@ -834,7 +963,13 @@ var EvChargeFlowCard = class extends i4 {
           .entities=${this._config.entities}
           .config=${m2}
         ></ecf-gauge-ring>`;
-      // 'energy_flow', 'stats' and 'controls' land in later phases.
+      case "stats":
+        return b2`<ecf-stats-grid
+          .hass=${this.hass}
+          .entities=${this._config.entities}
+          .config=${m2}
+        ></ecf-stats-grid>`;
+      // 'energy_flow' and 'controls' land in later phases.
       default:
         return A;
     }
@@ -851,6 +986,9 @@ var EvChargeFlowCard = class extends i4 {
   }
   static {
     this.styles = i`
+    :host {
+      display: block;
+    }
     .modules {
       display: flex;
       flex-direction: column;

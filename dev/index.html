@@ -31,6 +31,14 @@
       <label>Batteria (%): <span id="socOut">91</span></label>
       <input id="soc" type="range" min="0" max="100" value="91" />
     </div>
+    <div>
+      <label>Energia sessione (kWh): <span id="energyOut">12.4</span></label>
+      <input id="energy" type="range" min="0" max="500" value="124" />
+    </div>
+    <div>
+      <label>Tempo sessione (min): <span id="timeOut">83</span></label>
+      <input id="time" type="range" min="0" max="600" value="83" />
+    </div>
   </div>
 
   <div class="card-holder">
@@ -48,22 +56,35 @@
         wallbox_max: 7400,
         battery_power: "sensor.demo_battery_power",
         battery_soc: "sensor.demo_battery_soc",
+        session_energy: "sensor.demo_session_energy",
+        session_time: "sensor.demo_session_time",
+        energy_cost_per_kwh: 0.22,
       },
-      modules: [{ type: "gauge", enabled: true }],
+      modules: [
+        { type: "gauge", enabled: true },
+        { type: "stats", enabled: true },
+      ],
     });
 
     function mockHass() {
       const p = document.getElementById("p").value;
       const pb = (document.getElementById("pb").value / 100).toFixed(2);
       const soc = document.getElementById("soc").value;
+      const energy = (document.getElementById("energy").value / 10).toFixed(1);
+      const timeMin = document.getElementById("time").value;
       document.getElementById("pOut").textContent = p;
       document.getElementById("pbOut").textContent = pb;
       document.getElementById("socOut").textContent = soc;
+      document.getElementById("energyOut").textContent = energy;
+      document.getElementById("timeOut").textContent = timeMin;
       return {
+        config: { currency: "EUR" },
         states: {
           "sensor.demo_wallbox_power": { entity_id: "sensor.demo_wallbox_power", state: String(p), attributes: { unit_of_measurement: "W" } },
           "sensor.demo_battery_power": { entity_id: "sensor.demo_battery_power", state: String(pb), attributes: { unit_of_measurement: "kW" } },
           "sensor.demo_battery_soc": { entity_id: "sensor.demo_battery_soc", state: String(soc), attributes: { unit_of_measurement: "%" } },
+          "sensor.demo_session_energy": { entity_id: "sensor.demo_session_energy", state: String(energy), attributes: { unit_of_measurement: "kWh" } },
+          "sensor.demo_session_time": { entity_id: "sensor.demo_session_time", state: String(timeMin), attributes: { unit_of_measurement: "min" } },
         },
       };
     }
@@ -71,7 +92,7 @@
     function refresh() {
       card.hass = mockHass();
     }
-    ["p", "pb", "soc"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
+    ["p", "pb", "soc", "energy", "time"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
     refresh();
   </script>
 </body>
