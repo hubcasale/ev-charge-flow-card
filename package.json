@@ -1,0 +1,22 @@
+{
+  "name": "ev-charge-flow-card",
+  "version": "0.1.0",
+  "description": "Home Assistant Lovelace card: rotating power gauge + energy flow for EV charging (wallbox + car), fully generic and configurable.",
+  "license": "MIT",
+  "author": "Corrado Gamberoni",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hubcasale/ev-charge-flow-card"
+  },
+  "scripts": {
+    "build": "esbuild src/ev-charge-flow-card.ts --bundle --format=esm --outfile=dist/ev-charge-flow-card.js",
+    "watch": "npm run build -- --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "lit": "^3.2.0"
+  }
+}

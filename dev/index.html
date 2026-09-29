@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>ev-charge-flow-card — anteprima locale (non fa parte del pacchetto)</title>
+<style>
+  body { background: #111; color: #eee; font-family: system-ui, sans-serif; padding: 24px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 24px; max-width: 640px; }
+  label { display: block; font-size: 13px; margin-bottom: 4px; }
+  input[type="range"] { width: 220px; }
+  .card-holder { width: 260px; }
+  code { color: #9cf; }
+</style>
+</head>
+<body>
+  <h1>Anteprima locale — ev-charge-flow-card</h1>
+  <p>Non fa parte del pacchetto pubblicato: serve solo a verificare a occhio l'anello
+  senza toccare un'istanza Home Assistant vera. Muovi gli slider e guarda velocità
+  di rotazione, sfumatura in coda e i tre numeri al centro.</p>
+
+  <div class="controls">
+    <div>
+      <label>Potenza wallbox (W): <span id="pOut">5181</span></label>
+      <input id="p" type="range" min="0" max="7400" value="5181" />
+    </div>
+    <div>
+      <label>Potenza batteria (kW): <span id="pbOut">4.72</span></label>
+      <input id="pb" type="range" min="0" max="740" value="472" />
+    </div>
+    <div>
+      <label>Batteria (%): <span id="socOut">91</span></label>
+      <input id="soc" type="range" min="0" max="100" value="91" />
+    </div>
+  </div>
+
+  <div class="card-holder">
+    <ev-charge-flow-card id="card"></ev-charge-flow-card>
+  </div>
+
+  <script type="module">
+    import "../dist/ev-charge-flow-card.js";
+
+    const card = document.getElementById("card");
+    card.setConfig({
+      type: "custom:ev-charge-flow-card",
+      entities: {
+        wallbox_power: "sensor.demo_wallbox_power",
+        wallbox_max: 7400,
+        battery_power: "sensor.demo_battery_power",
+        battery_soc: "sensor.demo_battery_soc",
+      },
+      modules: [{ type: "gauge", enabled: true }],
+    });
+
+    function mockHass() {
+      const p = document.getElementById("p").value;
+      const pb = (document.getElementById("pb").value / 100).toFixed(2);
+      const soc = document.getElementById("soc").value;
+      document.getElementById("pOut").textContent = p;
+      document.getElementById("pbOut").textContent = pb;
+      document.getElementById("socOut").textContent = soc;
+      return {
+        states: {
+          "sensor.demo_wallbox_power": { entity_id: "sensor.demo_wallbox_power", state: String(p), attributes: { unit_of_measurement: "W" } },
+          "sensor.demo_battery_power": { entity_id: "sensor.demo_battery_power", state: String(pb), attributes: { unit_of_measurement: "kW" } },
+          "sensor.demo_battery_soc": { entity_id: "sensor.demo_battery_soc", state: String(soc), attributes: { unit_of_measurement: "%" } },
+        },
+      };
+    }
+
+    function refresh() {
+      card.hass = mockHass();
+    }
+    ["p", "pb", "soc"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
+    refresh();
+  </script>
+</body>
+</html>
