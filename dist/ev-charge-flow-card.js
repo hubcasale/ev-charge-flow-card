@@ -935,6 +935,148 @@ EcfStatsGrid = __decorateClass([
   t3("ecf-stats-grid")
 ], EcfStatsGrid);
 
+// src/modules/energy-flow.ts
+var EcfEnergyFlow = class extends i4 {
+  constructor() {
+    super(...arguments);
+    this.entities = {};
+    this.config = { type: "energy_flow" };
+  }
+  static pct(x2, y3) {
+    return {
+      left: `${x2 / EcfEnergyFlow.BOX_W * 100}%`,
+      top: `${y3 / EcfEnergyFlow.BOX_H * 100}%`
+    };
+  }
+  _node(icon, watts, label, x2, y3) {
+    const { left, top } = EcfEnergyFlow.pct(x2, y3);
+    return b2`
+      <div class="node" style="left:${left};top:${top}">
+        <ha-icon icon=${icon}></ha-icon>
+        <div class="value">${(watts / 1e3).toFixed(2)} kW</div>
+        <div class="label">${label}</div>
+      </div>
+    `;
+  }
+  _line(x1, y1, x2, y22, watts, maxW, reverse) {
+    const frac = clamp(Math.abs(watts) / maxW, 0, 1);
+    const flowing = Math.abs(watts) > 0;
+    const dur = flowing ? 3 - 2.5 * frac : 999;
+    const style = flowing ? `animation: ecf-flow-dash ${dur}s linear infinite; animation-direction: ${reverse ? "reverse" : "normal"};` : "";
+    return w`<line x1=${x1} y1=${y1} x2=${x2} y2=${y22} style=${style}></line>`;
+  }
+  render() {
+    if (!this.hass) return A;
+    const e5 = this.entities;
+    const wallboxW = stateWatts(this.hass, e5.wallbox_power);
+    if (wallboxW === void 0) return A;
+    const maxW = resolveNumberOrEntity(this.hass, e5.wallbox_max, 7400);
+    const sources = [];
+    const solarW = stateWatts(this.hass, e5.solar_power);
+    if (solarW !== void 0) sources.push({ icon: "mdi:solar-power", label: "Solare", watts: solarW, reverse: false });
+    const gridW = stateWatts(this.hass, e5.grid_power);
+    if (gridW !== void 0) sources.push({ icon: "mdi:transmission-tower", label: "Rete", watts: gridW, reverse: false });
+    const battW = stateWatts(this.hass, e5.home_battery_power);
+    if (battW !== void 0)
+      sources.push({
+        icon: "mdi:home-battery",
+        label: "Batteria casa",
+        watts: battW,
+        reverse: battW < 0
+        // negative = charging: dashes flow into it, not out of it
+      });
+    if (sources.length === 0) {
+      return b2`
+        <div class="wrap">
+          ${this._node("mdi:car-electric", wallboxW, "Auto", EcfEnergyFlow.RIGHT_X, EcfEnergyFlow.RIGHT_Y)}
+        </div>
+      `;
+    }
+    const n5 = sources.length;
+    const ys = sources.map((_2, i5) => (i5 + 1) / (n5 + 1) * EcfEnergyFlow.BOX_H);
+    return b2`
+      <div class="wrap">
+        <svg viewBox="0 0 ${EcfEnergyFlow.BOX_W} ${EcfEnergyFlow.BOX_H}">
+          ${sources.map(
+      (s4, i5) => this._line(EcfEnergyFlow.LEFT_X, ys[i5], EcfEnergyFlow.RIGHT_X, EcfEnergyFlow.RIGHT_Y, s4.watts, maxW, s4.reverse)
+    )}
+        </svg>
+        ${sources.map((s4, i5) => this._node(s4.icon, s4.watts, s4.label, EcfEnergyFlow.LEFT_X, ys[i5]))}
+        ${this._node("mdi:car-electric", wallboxW, "Auto", EcfEnergyFlow.RIGHT_X, EcfEnergyFlow.RIGHT_Y)}
+      </div>
+    `;
+  }
+};
+EcfEnergyFlow.styles = i`
+    :host {
+      display: block;
+    }
+    .wrap {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      aspect-ratio: 240 / 200;
+    }
+    svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    line {
+      stroke: var(--ecf-flow-line-color, #555);
+      stroke-width: 2;
+      stroke-dasharray: 6 6;
+    }
+    @keyframes ecf-flow-dash {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    .node {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1px;
+      width: 64px;
+    }
+    .node ha-icon {
+      color: var(--secondary-text-color);
+      --mdc-icon-size: 20px;
+    }
+    .node .value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary-text-color);
+      white-space: nowrap;
+    }
+    .node .label {
+      font-size: 10px;
+      color: var(--secondary-text-color);
+    }
+  `;
+EcfEnergyFlow.BOX_W = 240;
+EcfEnergyFlow.BOX_H = 200;
+EcfEnergyFlow.LEFT_X = 40;
+EcfEnergyFlow.RIGHT_X = 200;
+EcfEnergyFlow.RIGHT_Y = 100;
+__decorateClass([
+  n4({ attribute: false })
+], EcfEnergyFlow.prototype, "hass", 2);
+__decorateClass([
+  n4({ attribute: false })
+], EcfEnergyFlow.prototype, "entities", 2);
+__decorateClass([
+  n4({ attribute: false })
+], EcfEnergyFlow.prototype, "config", 2);
+EcfEnergyFlow = __decorateClass([
+  t3("ecf-energy-flow")
+], EcfEnergyFlow);
+
 // src/editor.ts
 var ENTITY_FIELDS = [
   { key: "wallbox_power", label: "Potenza wallbox" },
@@ -945,14 +1087,14 @@ var ENTITY_FIELDS = [
   { key: "session_time", label: "Tempo sessione" },
   { key: "session_cost", label: "Costo sessione (se gi\xE0 calcolato)" },
   { key: "energy_cost_per_kwh", label: "Prezzo per kWh (numero, o id entit\xE0)", numberOrEntity: true },
-  { key: "grid_power", label: "Potenza rete", hint: "per il flusso energia \u2014 modulo non ancora attivo" },
-  { key: "solar_power", label: "Potenza fotovoltaico", hint: "per il flusso energia \u2014 modulo non ancora attivo" },
-  { key: "home_battery_power", label: "Potenza batteria di casa", hint: "per il flusso energia \u2014 modulo non ancora attivo" }
+  { key: "grid_power", label: "Potenza rete", hint: "per il flusso energia" },
+  { key: "solar_power", label: "Potenza fotovoltaico", hint: "per il flusso energia" },
+  { key: "home_battery_power", label: "Potenza batteria di casa", hint: "per il flusso energia" }
 ];
 var MODULE_LABELS = {
   gauge: "Quadrante rotante",
   stats: "Statistiche (energia / tempo / costo)",
-  energy_flow: "Flusso energia (non ancora attivo)",
+  energy_flow: "Flusso energia",
   controls: "Comandi (non ancora attivo)"
 };
 var ALL_MODULE_TYPES = ["gauge", "stats", "energy_flow", "controls"];
@@ -1100,7 +1242,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.3.0";
+var CARD_VERSION = "0.4.0";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {
@@ -1140,7 +1282,13 @@ var EvChargeFlowCard = class extends i4 {
           .entities=${this._config.entities}
           .config=${m2}
         ></ecf-stats-grid>`;
-      // 'energy_flow' and 'controls' land in later phases.
+      case "energy_flow":
+        return b2`<ecf-energy-flow
+          .hass=${this.hass}
+          .entities=${this._config.entities}
+          .config=${m2}
+        ></ecf-energy-flow>`;
+      // 'controls' lands in a later phase.
       default:
         return A;
     }

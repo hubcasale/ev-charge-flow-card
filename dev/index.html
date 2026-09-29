@@ -39,6 +39,18 @@
       <label>Tempo sessione (min): <span id="timeOut">83</span></label>
       <input id="time" type="range" min="0" max="600" value="83" />
     </div>
+    <div>
+      <label>Solare (W): <span id="solarOut">1800</span></label>
+      <input id="solar" type="range" min="0" max="4000" value="1800" />
+    </div>
+    <div>
+      <label>Rete (W): <span id="gridOut">3400</span></label>
+      <input id="grid" type="range" min="0" max="7400" value="3400" />
+    </div>
+    <div>
+      <label>Batteria casa (W, negativo = in carica): <span id="hbatOut">-1000</span></label>
+      <input id="hbat" type="range" min="-4000" max="4000" value="-1000" />
+    </div>
   </div>
 
   <div class="card-holder">
@@ -59,9 +71,13 @@
         session_energy: "sensor.demo_session_energy",
         session_time: "sensor.demo_session_time",
         energy_cost_per_kwh: 0.22,
+        solar_power: "sensor.demo_solar_power",
+        grid_power: "sensor.demo_grid_power",
+        home_battery_power: "sensor.demo_home_battery_power",
       },
       modules: [
         { type: "gauge", enabled: true },
+        { type: "energy_flow", enabled: true },
         { type: "stats", enabled: true },
       ],
     });
@@ -72,11 +88,17 @@
       const soc = document.getElementById("soc").value;
       const energy = (document.getElementById("energy").value / 10).toFixed(1);
       const timeMin = document.getElementById("time").value;
+      const solar = document.getElementById("solar").value;
+      const grid = document.getElementById("grid").value;
+      const hbat = document.getElementById("hbat").value;
       document.getElementById("pOut").textContent = p;
       document.getElementById("pbOut").textContent = pb;
       document.getElementById("socOut").textContent = soc;
       document.getElementById("energyOut").textContent = energy;
       document.getElementById("timeOut").textContent = timeMin;
+      document.getElementById("solarOut").textContent = solar;
+      document.getElementById("gridOut").textContent = grid;
+      document.getElementById("hbatOut").textContent = hbat;
       return {
         config: { currency: "EUR" },
         states: {
@@ -85,6 +107,9 @@
           "sensor.demo_battery_soc": { entity_id: "sensor.demo_battery_soc", state: String(soc), attributes: { unit_of_measurement: "%" } },
           "sensor.demo_session_energy": { entity_id: "sensor.demo_session_energy", state: String(energy), attributes: { unit_of_measurement: "kWh" } },
           "sensor.demo_session_time": { entity_id: "sensor.demo_session_time", state: String(timeMin), attributes: { unit_of_measurement: "min" } },
+          "sensor.demo_solar_power": { entity_id: "sensor.demo_solar_power", state: String(solar), attributes: { unit_of_measurement: "W" } },
+          "sensor.demo_grid_power": { entity_id: "sensor.demo_grid_power", state: String(grid), attributes: { unit_of_measurement: "W" } },
+          "sensor.demo_home_battery_power": { entity_id: "sensor.demo_home_battery_power", state: String(hbat), attributes: { unit_of_measurement: "W" } },
         },
       };
     }
@@ -92,7 +117,7 @@
     function refresh() {
       card.hass = mockHass();
     }
-    ["p", "pb", "soc", "energy", "time"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
+    ["p", "pb", "soc", "energy", "time", "solar", "grid", "hbat"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
     refresh();
   </script>
 </body>

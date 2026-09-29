@@ -30,15 +30,15 @@ const ENTITY_FIELDS: EntityField[] = [
   { key: "session_time", label: "Tempo sessione" },
   { key: "session_cost", label: "Costo sessione (se già calcolato)" },
   { key: "energy_cost_per_kwh", label: "Prezzo per kWh (numero, o id entità)", numberOrEntity: true },
-  { key: "grid_power", label: "Potenza rete", hint: "per il flusso energia — modulo non ancora attivo" },
-  { key: "solar_power", label: "Potenza fotovoltaico", hint: "per il flusso energia — modulo non ancora attivo" },
-  { key: "home_battery_power", label: "Potenza batteria di casa", hint: "per il flusso energia — modulo non ancora attivo" },
+  { key: "grid_power", label: "Potenza rete", hint: "per il flusso energia" },
+  { key: "solar_power", label: "Potenza fotovoltaico", hint: "per il flusso energia" },
+  { key: "home_battery_power", label: "Potenza batteria di casa", hint: "per il flusso energia" },
 ];
 
 const MODULE_LABELS: Record<ModuleType, string> = {
   gauge: "Quadrante rotante",
   stats: "Statistiche (energia / tempo / costo)",
-  energy_flow: "Flusso energia (non ancora attivo)",
+  energy_flow: "Flusso energia",
   controls: "Comandi (non ancora attivo)",
 };
 

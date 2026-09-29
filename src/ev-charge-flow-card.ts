@@ -2,25 +2,25 @@ import { LitElement, html, css, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import "./modules/gauge-ring";
 import "./modules/stats-grid";
+import "./modules/energy-flow";
 import "./editor";
 import type { CardConfig, HomeAssistant, ModuleConfig } from "./types";
 import { DEFAULT_MODULES } from "./types";
 
 const CARD_TAG = "ev-charge-flow-card";
-const CARD_VERSION = "0.3.0";
+const CARD_VERSION = "0.4.0";
 
 /**
- * A single Lovelace card bundling the visuals of an EV charging session:
- * a rotating power gauge (wallbox vs. what actually reaches the battery),
- * a stats grid (session energy / time / cost), plus, in later phases, an
- * energy-flow diagram. Every value is entity-driven and optional, so the
- * card degrades gracefully (see README) whatever subset of sensors you
- * actually have.
+ * A single Lovelace card bundling the visuals of an EV charging session: a
+ * rotating power gauge (wallbox vs. what actually reaches the battery), an
+ * energy-flow diagram (where that power is coming from) and a stats grid
+ * (session energy / time / cost). Every value is entity-driven and
+ * optional, so the card degrades gracefully (see README) whatever subset
+ * of sensors you actually have.
  *
- * Phase 2: `gauge` and `stats` are implemented. `energy_flow` and
- * `controls` entries are accepted in config (so a config written against
- * the final schema keeps working later) but are silently skipped until
- * they land.
+ * Phase 4: `gauge`, `stats` and `energy_flow` are implemented. `controls`
+ * entries are accepted in config (so a config written against the final
+ * schema keeps working later) but are silently skipped until it lands.
  */
 export class EvChargeFlowCard extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
@@ -68,7 +68,13 @@ export class EvChargeFlowCard extends LitElement {
           .entities=${this._config.entities}
           .config=${m}
         ></ecf-stats-grid>`;
-      // 'energy_flow' and 'controls' land in later phases.
+      case "energy_flow":
+        return html`<ecf-energy-flow
+          .hass=${this.hass}
+          .entities=${this._config.entities}
+          .config=${m}
+        ></ecf-energy-flow>`;
+      // 'controls' lands in a later phase.
       default:
         return nothing;
     }

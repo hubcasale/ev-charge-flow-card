@@ -1,8 +1,8 @@
 # EV Charge Flow Card
 
 A Home Assistant Lovelace card for an EV charging session: a rotating power
-gauge (wallbox draw vs. what actually reaches the battery), and — as the
-project grows — an energy-flow diagram and a small stats grid. One card,
+gauge (wallbox draw vs. what actually reaches the battery), an energy-flow
+diagram (where that power is coming from) and a small stats grid. One card,
 drop it anywhere, point it at whatever entities you already have.
 
 It doesn't assume any particular brand of wallbox or car: every value is an
@@ -10,10 +10,10 @@ entity you choose in the config, and the card quietly hides whatever part it
 can't compute from what you've given it. Power sensors are read in whatever
 unit they report (W or kW) — no need to convert anything yourself.
 
-> 🚧 **Early days.** Gauge, stats and the visual editor exist so far (see
-> [Roadmap](#roadmap)). The config schema below is the target shape; fields
-> for modules that don't exist yet are accepted (so your config keeps
-> working later) but have no visible effect until that module lands.
+> 🚧 **Early days.** Gauge, stats, energy-flow and the visual editor exist
+> so far (see [Roadmap](#roadmap)); only `controls` is still a no-op —
+> accepted in config, so it keeps working once it lands, but invisible
+> until then.
 
 ## Screenshot
 
@@ -50,17 +50,20 @@ entities:
   battery_power: sensor.my_car_charge_power
   # Car's state of charge, in %.
   battery_soc: sensor.my_car_battery
-  # The rest are used by modules that aren't built yet — see Roadmap.
   session_energy: sensor.my_wallbox_session_energy
   session_time: sensor.my_wallbox_session_time
+  session_cost: sensor.my_wallbox_session_cost # or omit and set a price instead:
+  energy_cost_per_kwh: 0.22
+  # Used by the energy-flow module — all optional, add whichever you have.
   grid_power: sensor.my_grid_power
   solar_power: sensor.my_solar_power
+  home_battery_power: sensor.my_home_battery_power
 modules:
   - type: gauge
     enabled: true
-  - type: stats
+  - type: energy_flow
     enabled: true
-  - type: energy_flow # not implemented yet — accepted, has no effect
+  - type: stats
     enabled: true
   - type: controls # not implemented yet — accepted, has no effect
     enabled: false
@@ -94,13 +97,30 @@ otherwise, given `session_energy` and `energy_cost_per_kwh` (a literal price
 or an entity — a `input_number` you adjust by hand works fine), the card
 multiplies them itself. The currency symbol follows `hass.config.currency`.
 
+### The energy-flow diagram, briefly
+
+Up to three sources on the left — solar, grid, home battery, whichever you
+configure — each with a dashed line to the car on the right, `wallbox_power`
+strength again. Dashes flow left-to-right (into the car) and move faster
+with more power, same visual language as the gauge. A home battery is the
+one two-way case: negative power (charging, by the common HA convention)
+reverses its dashes to flow *into* the battery instead. No entity
+configured beyond `wallbox_power`? Just the car shows, no lines — and with
+one source, the line centres instead of trying to look like three.
+
+This is a small, purpose-built diagram — straight lines, no curves, no
+home-wide accounting for what solar/grid/battery are doing outside this
+charging session. For a full home-energy Sankey, use
+[power-flow-card-plus](https://github.com/flixlix/power-flow-card-plus)
+instead; this module isn't trying to replace it.
+
 ## Roadmap
 
 - [x] Gauge module
 - [x] Stats module (session energy / time / cost tiles)
 - [x] Visual config editor (entity pickers, enable/reorder modules)
-- [ ] Energy-flow module (grid → wallbox → battery, built from scratch —
-      no dependency on another custom card)
+- [x] Energy-flow module (solar/grid/home-battery → car, built from
+      scratch — no dependency on another custom card)
 - [ ] HACS listing
 
 ## Development
