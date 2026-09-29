@@ -2,11 +2,12 @@ import { LitElement, html, css, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import "./modules/gauge-ring";
 import "./modules/stats-grid";
+import "./editor";
 import type { CardConfig, HomeAssistant, ModuleConfig } from "./types";
 import { DEFAULT_MODULES } from "./types";
 
 const CARD_TAG = "ev-charge-flow-card";
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.3.0";
 
 /**
  * A single Lovelace card bundling the visuals of an EV charging session:
@@ -42,6 +43,14 @@ export class EvChargeFlowCard extends LitElement {
   getCardSize(): number {
     const enabled = (this._config?.modules ?? []).filter((m) => m.enabled !== false);
     return Math.max(1, enabled.length * 2);
+  }
+
+  static getConfigElement(): HTMLElement {
+    return document.createElement("ev-charge-flow-card-editor");
+  }
+
+  static getStubConfig(): CardConfig {
+    return { type: `custom:${CARD_TAG}`, entities: {}, modules: DEFAULT_MODULES };
   }
 
   private _renderModule(m: ModuleConfig) {

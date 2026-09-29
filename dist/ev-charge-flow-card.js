@@ -679,6 +679,16 @@ function currencySymbol(hass) {
   if (code && CURRENCY_SYMBOLS[code]) return CURRENCY_SYMBOLS[code];
   return code ?? "\u20AC";
 }
+var CURRENCY_ICONS = {
+  EUR: "mdi:currency-eur",
+  USD: "mdi:currency-usd",
+  GBP: "mdi:currency-gbp",
+  JPY: "mdi:currency-jpy"
+};
+function currencyIcon(hass) {
+  const code = hass.config?.currency;
+  return code && CURRENCY_ICONS[code] || "mdi:cash";
+}
 
 // src/modules/gauge-ring.ts
 var EcfGaugeRing = class extends i4 {
@@ -874,7 +884,7 @@ var EcfStatsGrid = class extends i4 {
     const tiles = [
       energyKwh !== void 0 ? this._tile("mdi:lightning-bolt-outline", `${energyKwh.toFixed(2)} kWh`, "Energia") : A,
       seconds !== void 0 ? this._tile("mdi:timer-outline", formatDuration(seconds), "Tempo") : A,
-      cost !== void 0 ? this._tile("mdi:currency-usd", `${cost.toFixed(2)} ${currencySymbol(this.hass)}`, "Costo") : A
+      cost !== void 0 ? this._tile(currencyIcon(this.hass), `${cost.toFixed(2)} ${currencySymbol(this.hass)}`, "Costo") : A
     ].filter((t4) => t4 !== A);
     if (tiles.length === 0) return A;
     return b2`<div class="grid">${tiles}</div>`;
@@ -925,6 +935,161 @@ EcfStatsGrid = __decorateClass([
   t3("ecf-stats-grid")
 ], EcfStatsGrid);
 
+// src/editor.ts
+var ENTITY_FIELDS = [
+  { key: "wallbox_power", label: "Potenza wallbox" },
+  { key: "wallbox_max", label: "Potenza massima wallbox (W, o id entit\xE0)", numberOrEntity: true },
+  { key: "battery_power", label: "Potenza alla batteria" },
+  { key: "battery_soc", label: "Percentuale batteria" },
+  { key: "session_energy", label: "Energia sessione" },
+  { key: "session_time", label: "Tempo sessione" },
+  { key: "session_cost", label: "Costo sessione (se gi\xE0 calcolato)" },
+  { key: "energy_cost_per_kwh", label: "Prezzo per kWh (numero, o id entit\xE0)", numberOrEntity: true },
+  { key: "grid_power", label: "Potenza rete", hint: "per il flusso energia \u2014 modulo non ancora attivo" },
+  { key: "solar_power", label: "Potenza fotovoltaico", hint: "per il flusso energia \u2014 modulo non ancora attivo" },
+  { key: "home_battery_power", label: "Potenza batteria di casa", hint: "per il flusso energia \u2014 modulo non ancora attivo" }
+];
+var MODULE_LABELS = {
+  gauge: "Quadrante rotante",
+  stats: "Statistiche (energia / tempo / costo)",
+  energy_flow: "Flusso energia (non ancora attivo)",
+  controls: "Comandi (non ancora attivo)"
+};
+var ALL_MODULE_TYPES = ["gauge", "stats", "energy_flow", "controls"];
+function fireConfigChanged(el, config) {
+  el.dispatchEvent(
+    new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true })
+  );
+}
+function withAllModuleTypes(modules) {
+  const list = modules ? [...modules] : [];
+  const present = new Set(list.map((m2) => m2.type));
+  for (const type of ALL_MODULE_TYPES) {
+    if (!present.has(type)) list.push({ type, enabled: false });
+  }
+  return list;
+}
+var EvChargeFlowCardEditor = class extends i4 {
+  setConfig(config) {
+    this._config = config;
+  }
+  _entityChanged(key, value) {
+    const entities = { ...this._config.entities, [key]: value === "" ? void 0 : value };
+    fireConfigChanged(this, { ...this._config, entities });
+  }
+  _numberOrEntityChanged(key, raw) {
+    let value = raw.trim() === "" ? void 0 : raw.trim();
+    if (typeof value === "string") {
+      const n5 = Number(value);
+      if (Number.isFinite(n5) && value !== "") value = n5;
+    }
+    const entities = { ...this._config.entities, [key]: value };
+    fireConfigChanged(this, { ...this._config, entities });
+  }
+  _toggleModule(index, modules) {
+    const next = modules.map((m2, i5) => i5 === index ? { ...m2, enabled: !(m2.enabled !== false) } : m2);
+    fireConfigChanged(this, { ...this._config, modules: next });
+  }
+  _moveModule(index, delta, modules) {
+    const target = index + delta;
+    if (target < 0 || target >= modules.length) return;
+    const next = [...modules];
+    [next[index], next[target]] = [next[target], next[index]];
+    fireConfigChanged(this, { ...this._config, modules: next });
+  }
+  render() {
+    if (!this._config || !this.hass) return A;
+    const entities = this._config.entities ?? {};
+    const modules = withAllModuleTypes(this._config.modules);
+    return b2`
+      <div class="section">Entità</div>
+      ${ENTITY_FIELDS.map(
+      (f3) => f3.numberOrEntity ? b2`
+              <ha-textfield
+                .label=${f3.label}
+                .value=${String(entities[f3.key] ?? "")}
+                @change=${(e5) => this._numberOrEntityChanged(f3.key, e5.target.value)}
+              ></ha-textfield>
+            ` : b2`
+              ${f3.hint ? b2`<div class="hint">${f3.hint}</div>` : A}
+              <ha-entity-picker
+                .hass=${this.hass}
+                .label=${f3.label}
+                .value=${entities[f3.key] ?? ""}
+                allow-custom-entity
+                @value-changed=${(e5) => this._entityChanged(f3.key, e5.detail.value)}
+              ></ha-entity-picker>
+            `
+    )}
+
+      <div class="section">Moduli</div>
+      ${modules.map(
+      (m2, i5) => b2`
+          <div class="module-row">
+            <ha-icon-button
+              .disabled=${i5 === 0}
+              .path=${"M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"}
+              @click=${() => this._moveModule(i5, -1, modules)}
+            ></ha-icon-button>
+            <ha-icon-button
+              .disabled=${i5 === modules.length - 1}
+              .path=${"M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"}
+              @click=${() => this._moveModule(i5, 1, modules)}
+            ></ha-icon-button>
+            <span class="module-name">${MODULE_LABELS[m2.type]}</span>
+            <ha-switch
+              .checked=${m2.enabled !== false}
+              @change=${() => this._toggleModule(i5, modules)}
+            ></ha-switch>
+          </div>
+        `
+    )}
+    `;
+  }
+};
+EvChargeFlowCardEditor.styles = i`
+    :host {
+      display: block;
+    }
+    .section {
+      margin: 16px 0 8px;
+      font-weight: 600;
+      color: var(--primary-text-color);
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      margin: -4px 0 6px;
+    }
+    ha-entity-picker,
+    ha-textfield {
+      display: block;
+      margin-bottom: 8px;
+    }
+    .module-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--divider-color, #444);
+    }
+    .module-name {
+      flex: 1;
+    }
+    .module-row ha-icon-button {
+      --mdc-icon-button-size: 32px;
+    }
+  `;
+__decorateClass([
+  n4({ attribute: false })
+], EvChargeFlowCardEditor.prototype, "hass", 2);
+__decorateClass([
+  r5()
+], EvChargeFlowCardEditor.prototype, "_config", 2);
+EvChargeFlowCardEditor = __decorateClass([
+  t3("ev-charge-flow-card-editor")
+], EvChargeFlowCardEditor);
+
 // src/types.ts
 var DEFAULT_MODULES = [
   { type: "gauge", enabled: true },
@@ -935,7 +1100,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.2.0";
+var CARD_VERSION = "0.3.0";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {
@@ -953,6 +1118,12 @@ var EvChargeFlowCard = class extends i4 {
   getCardSize() {
     const enabled = (this._config?.modules ?? []).filter((m2) => m2.enabled !== false);
     return Math.max(1, enabled.length * 2);
+  }
+  static getConfigElement() {
+    return document.createElement("ev-charge-flow-card-editor");
+  }
+  static getStubConfig() {
+    return { type: `custom:${CARD_TAG}`, entities: {}, modules: DEFAULT_MODULES };
   }
   _renderModule(m2) {
     if (m2.enabled === false) return A;

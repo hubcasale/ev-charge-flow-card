@@ -10,7 +10,7 @@ entity you choose in the config, and the card quietly hides whatever part it
 can't compute from what you've given it. Power sensors are read in whatever
 unit they report (W or kW) — no need to convert anything yourself.
 
-> 🚧 **Early days.** Gauge and stats exist so far (see
+> 🚧 **Early days.** Gauge, stats and the visual editor exist so far (see
 > [Roadmap](#roadmap)). The config schema below is the target shape; fields
 > for modules that don't exist yet are accepted (so your config keeps
 > working later) but have no visible effect until that module lands.
@@ -70,8 +70,11 @@ Every key under `entities` is optional. With only `wallbox_power` set you
 get a single ring and one number; add the rest as you have them.
 
 `modules` is an **ordered** list — the order you write is the order the
-card renders top to bottom — with an `enabled` flag per entry. There's no
-visual editor yet (see Roadmap), so for now this is YAML-only.
+card renders top to bottom — with an `enabled` flag per entry. Use the
+visual editor (Edit dashboard → this card → the pencil icon) to pick every
+entity from a dropdown and reorder/enable modules with the up/down arrows
+and a switch, rather than writing this YAML by hand — up/down instead of
+drag-and-drop, for reliability across mouse, trackpad and touch alike.
 
 ### The gauge, briefly
 
@@ -95,7 +98,7 @@ multiplies them itself. The currency symbol follows `hass.config.currency`.
 
 - [x] Gauge module
 - [x] Stats module (session energy / time / cost tiles)
-- [ ] Visual config editor (entity pickers, drag-to-reorder modules)
+- [x] Visual config editor (entity pickers, enable/reorder modules)
 - [ ] Energy-flow module (grid → wallbox → battery, built from scratch —
       no dependency on another custom card)
 - [ ] HACS listing

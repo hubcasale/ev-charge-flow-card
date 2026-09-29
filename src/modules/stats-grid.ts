@@ -2,6 +2,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { EntitiesConfig, HomeAssistant, ModuleConfig } from "../types";
 import {
+  currencyIcon,
   currencySymbol,
   formatDuration,
   resolveNumberOrEntityRaw,
@@ -87,7 +88,7 @@ export class EcfStatsGrid extends LitElement {
         ? this._tile("mdi:timer-outline", formatDuration(seconds), "Tempo")
         : nothing,
       cost !== undefined
-        ? this._tile("mdi:currency-usd", `${cost.toFixed(2)} ${currencySymbol(this.hass)}`, "Costo")
+        ? this._tile(currencyIcon(this.hass), `${cost.toFixed(2)} ${currencySymbol(this.hass)}`, "Costo")
         : nothing,
     ].filter((t) => t !== nothing);
 

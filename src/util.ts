@@ -109,3 +109,16 @@ export function currencySymbol(hass: HomeAssistant): string {
   if (code && CURRENCY_SYMBOLS[code]) return CURRENCY_SYMBOLS[code];
   return code ?? "€";
 }
+
+const CURRENCY_ICONS: Record<string, string> = {
+  EUR: "mdi:currency-eur",
+  USD: "mdi:currency-usd",
+  GBP: "mdi:currency-gbp",
+  JPY: "mdi:currency-jpy",
+};
+
+/** Matches `currencySymbol()`'s currency, instead of always showing a $ sign. */
+export function currencyIcon(hass: HomeAssistant): string {
+  const code = (hass as { config?: { currency?: string } }).config?.currency;
+  return (code && CURRENCY_ICONS[code]) || "mdi:cash";
+}
