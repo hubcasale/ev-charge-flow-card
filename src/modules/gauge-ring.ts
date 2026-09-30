@@ -10,11 +10,15 @@ import { clamp, resolveNumberOrEntity, stateNum, stateWatts } from "../util";
  *  - middle: wallbox power (how much the wallbox is drawing from the grid)
  *    — orange, spins clockwise.
  *  - innermost: power actually reaching the battery (what the car itself
- *    reports) — yellow, spins counter-clockwise.
- * The two power rings sweep an arc proportional to power/max (a full circle
- * at max power), with a soft fade at the *tail* only — the head (leading
- * edge, in the direction of rotation) stays sharp. Rotation speed also
- * scales with power: faster spin = more power right now.
+ *    reports) — yellow, also spins clockwise.
+ * Both power rings spin the same direction, starting from the same 0deg
+ * reference, so the two arcs read as directly comparable at a glance: the
+ * wallbox arc reaches further than the battery arc by exactly the
+ * conversion loss between the two. Each sweeps an arc proportional to
+ * power/max (a full circle at max power), with a soft fade at the *tail*
+ * only — the head (leading edge, in the direction of rotation) stays
+ * sharp. Rotation speed also scales with power: faster spin = more power
+ * right now.
  *
  * This reproduces, as a real component, the button-card + card-mod hack
  * tuned by hand in HA before this card existed — see the project's README
@@ -89,7 +93,7 @@ export class EcfGaugeRing extends LitElement {
         #000 calc(100% - 40px),
         transparent calc(100% - 40px)
       );
-      animation: ecf-spin-rev var(--ecf-battery-duration, 999s) linear infinite;
+      animation: ecf-spin var(--ecf-battery-duration, 999s) linear infinite;
       z-index: 2;
     }
     @keyframes ecf-spin {
@@ -98,14 +102,6 @@ export class EcfGaugeRing extends LitElement {
       }
       to {
         transform: rotate(360deg);
-      }
-    }
-    @keyframes ecf-spin-rev {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(-360deg);
       }
     }
     .label {
@@ -200,7 +196,7 @@ export class EcfGaugeRing extends LitElement {
     const durBattery = hasBattery && pb! > 0 ? 8 - 7.4 * fracBattery : 999;
 
     const wallboxGradient = EcfGaugeRing.gradient(arcWallbox, fadeWallbox, "#e65100", "#ffb74d", true);
-    const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", false);
+    const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", true);
 
     // Static clock-face fill: 12 o'clock = 0%, sweeping clockwise to 100%.
     const arcSoc = hasSoc ? clamp(soc! / 100, 0, 1) * 360 : 0;

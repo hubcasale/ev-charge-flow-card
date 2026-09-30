@@ -730,7 +730,7 @@ var EcfGaugeRing = class extends i4 {
     const durWallbox = hasWallbox && p3 > 0 ? 8 - 7.4 * fracWallbox : 999;
     const durBattery = hasBattery && pb > 0 ? 8 - 7.4 * fracBattery : 999;
     const wallboxGradient = EcfGaugeRing.gradient(arcWallbox, fadeWallbox, "#e65100", "#ffb74d", true);
-    const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", false);
+    const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", true);
     const arcSoc = hasSoc ? clamp(soc / 100, 0, 1) * 360 : 0;
     const socGradient = hasSoc ? `conic-gradient(from 0deg,#66bb6a 0deg,#66bb6a ${arcSoc.toFixed(1)}deg,rgba(255, 255, 255, 0.1) ${arcSoc.toFixed(1)}deg,rgba(255, 255, 255, 0.1) 360deg)` : "transparent";
     const resa = hasWallbox && hasBattery && p3 > 0 ? Math.round(pb / p3 * 100) : void 0;
@@ -820,7 +820,7 @@ EcfGaugeRing.styles = i`
         #000 calc(100% - 40px),
         transparent calc(100% - 40px)
       );
-      animation: ecf-spin-rev var(--ecf-battery-duration, 999s) linear infinite;
+      animation: ecf-spin var(--ecf-battery-duration, 999s) linear infinite;
       z-index: 2;
     }
     @keyframes ecf-spin {
@@ -829,14 +829,6 @@ EcfGaugeRing.styles = i`
       }
       to {
         transform: rotate(360deg);
-      }
-    }
-    @keyframes ecf-spin-rev {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(-360deg);
       }
     }
     .label {
