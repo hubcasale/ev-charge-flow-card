@@ -85,13 +85,16 @@ drag-and-drop, for reliability across mouse, trackpad and touch alike.
 
 ### The gauge, briefly
 
-Two rings, each an arc whose length is `power / wallbox_max` (a full circle
-at max power) and whose rotation speed also scales with power — faster spin,
-more power right now. The outer (green) ring is the wallbox; the inner
-(orange) ring is what's reaching the battery. The gap between how far each
-arc reaches is, visually, the conversion loss between the two. Centre reads,
-top to bottom: battery %, power reaching the battery (big), wallbox power
-and the resulting efficiency % (small).
+Three concentric rings. The outermost (green) is the battery's state of
+charge — a plain clock-face fill, 12 o'clock is 0%, sweeping clockwise to
+100%, static (no spin). The middle (orange) and inner (yellow) rings are
+the wallbox draw and what's actually reaching the battery: each an arc
+whose length is `power / wallbox_max` (a full circle at max power) and
+whose rotation speed also scales with power — faster spin, more power right
+now. The gap between how far the two power arcs reach is, visually, the
+conversion loss between them. Centre reads, top to bottom: battery %, power
+reaching the battery (big), wallbox power and the resulting efficiency %
+(small).
 
 ### The stats grid, briefly
 

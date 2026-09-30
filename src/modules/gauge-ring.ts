@@ -4,13 +4,17 @@ import type { EntitiesConfig, HomeAssistant, ModuleConfig } from "../types";
 import { clamp, resolveNumberOrEntity, stateNum, stateWatts } from "../util";
 
 /**
- * Two concentric rings:
- *  - outer: wallbox power (how much the wallbox is drawing from the grid)
- *  - inner: power actually reaching the battery (what the car itself reports)
- * Both rings sweep an arc proportional to power/max (a full circle at max
- * power), with a soft fade at the *tail* only — the head (leading edge, in
- * the direction of rotation) stays sharp. Rotation speed also scales with
- * power: faster spin = more power right now.
+ * Three concentric rings:
+ *  - outermost: battery state of charge, 0-100% — a static clock-face fill
+ *    (12 o'clock = 0%, sweeping clockwise), green. Doesn't spin.
+ *  - middle: wallbox power (how much the wallbox is drawing from the grid)
+ *    — orange, spins clockwise.
+ *  - innermost: power actually reaching the battery (what the car itself
+ *    reports) — yellow, spins counter-clockwise.
+ * The two power rings sweep an arc proportional to power/max (a full circle
+ * at max power), with a soft fade at the *tail* only — the head (leading
+ * edge, in the direction of rotation) stays sharp. Rotation speed also
+ * scales with power: faster spin = more power right now.
  *
  * This reproduces, as a real component, the button-card + card-mod hack
  * tuned by hand in HA before this card existed — see the project's README
@@ -30,8 +34,8 @@ export class EcfGaugeRing extends LitElement {
     }
     .ring {
       position: relative;
-      width: 200px;
-      height: 200px;
+      width: 240px;
+      height: 240px;
       border-radius: 50%;
       background: var(--ecf-bg, #1c1c1c);
       display: flex;
@@ -39,22 +43,19 @@ export class EcfGaugeRing extends LitElement {
       justify-content: center;
       overflow: hidden;
     }
-    .ring::before,
-    .ring::after {
-      content: "";
+    .ring-layer {
       position: absolute;
       inset: 0;
       border-radius: 50%;
     }
-    .ring::before {
-      background: var(--ecf-outer-gradient);
+    .ring-soc {
+      background: var(--ecf-soc-gradient);
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 14px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 14px));
-      animation: ecf-spin var(--ecf-outer-duration, 999s) linear infinite;
       z-index: 0;
     }
-    .ring::after {
-      background: var(--ecf-inner-gradient);
+    .ring-wallbox {
+      background: var(--ecf-wallbox-gradient);
       -webkit-mask: radial-gradient(
         farthest-side,
         transparent calc(100% - 34px),
@@ -69,8 +70,27 @@ export class EcfGaugeRing extends LitElement {
         #000 calc(100% - 20px),
         transparent calc(100% - 20px)
       );
-      animation: ecf-spin-rev var(--ecf-inner-duration, 999s) linear infinite;
+      animation: ecf-spin var(--ecf-wallbox-duration, 999s) linear infinite;
       z-index: 1;
+    }
+    .ring-battery {
+      background: var(--ecf-battery-gradient);
+      -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 54px),
+        #000 calc(100% - 54px),
+        #000 calc(100% - 40px),
+        transparent calc(100% - 40px)
+      );
+      mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 54px),
+        #000 calc(100% - 54px),
+        #000 calc(100% - 40px),
+        transparent calc(100% - 40px)
+      );
+      animation: ecf-spin-rev var(--ecf-battery-duration, 999s) linear infinite;
+      z-index: 2;
     }
     @keyframes ecf-spin {
       from {
@@ -90,7 +110,7 @@ export class EcfGaugeRing extends LitElement {
     }
     .label {
       position: relative;
-      z-index: 2;
+      z-index: 3;
       text-align: center;
       font-family: var(--paper-font-body1_-_font-family, inherit);
     }
@@ -103,19 +123,19 @@ export class EcfGaugeRing extends LitElement {
     .battery {
       font-size: 26px;
       font-weight: bold;
-      color: var(--ecf-inner-bright, #66bb6a);
+      color: var(--ecf-battery-text, #66bb6a);
       line-height: 1.2;
     }
     .wallbox {
       font-size: 15px;
       font-weight: bold;
-      color: var(--ecf-outer-bright, #ff9800);
+      color: var(--ecf-wallbox-text, #ff9800);
       line-height: 1.2;
       margin-top: 2px;
     }
   `;
 
-  /** Builds the tail-faded conic-gradient for one ring.
+  /** Builds the tail-faded conic-gradient for one of the two animated (power) rings.
    * `spinsClockwise` decides which end is the "head" (sharp, no fade):
    * for a clockwise sweep the head is at the *end* of the arc (higher
    * angle), for a counter-clockwise sweep it's the opposite — the fade
@@ -165,38 +185,53 @@ export class EcfGaugeRing extends LitElement {
     const soc = stateNum(this.hass, e.battery_soc); // %
     const maxP = resolveNumberOrEntity(this.hass, e.wallbox_max, 7400);
 
-    const hasOuter = p !== undefined && maxP > 0;
-    const hasInner = pb !== undefined && maxP > 0;
+    const hasWallbox = p !== undefined && maxP > 0;
+    const hasBattery = pb !== undefined && maxP > 0;
+    const hasSoc = soc !== undefined;
 
-    const fracOuter = hasOuter ? clamp(p! / maxP, 0, 1) : 0;
-    const fracInner = hasInner ? clamp(pb! / maxP, 0, 1) : 0;
-    const arcOuter = fracOuter * 360;
-    const arcInner = fracInner * 360;
-    const fadeOuter = Math.min(arcOuter / 3, 30);
-    const fadeInner = Math.min(arcInner / 3, 30);
+    const fracWallbox = hasWallbox ? clamp(p! / maxP, 0, 1) : 0;
+    const fracBattery = hasBattery ? clamp(pb! / maxP, 0, 1) : 0;
+    const arcWallbox = fracWallbox * 360;
+    const arcBattery = fracBattery * 360;
+    const fadeWallbox = Math.min(arcWallbox / 3, 30);
+    const fadeBattery = Math.min(arcBattery / 3, 30);
     // 8s at (near) zero power down to 0.6s at max power.
-    const durOuter = hasOuter && p! > 0 ? 8 - 7.4 * fracOuter : 999;
-    const durInner = hasInner && pb! > 0 ? 8 - 7.4 * fracInner : 999;
+    const durWallbox = hasWallbox && p! > 0 ? 8 - 7.4 * fracWallbox : 999;
+    const durBattery = hasBattery && pb! > 0 ? 8 - 7.4 * fracBattery : 999;
 
-    const outerGradient = EcfGaugeRing.gradient(arcOuter, fadeOuter, "#1b5e20", "#66bb6a", true);
-    const innerGradient = EcfGaugeRing.gradient(arcInner, fadeInner, "#e65100", "#ffb74d", false);
+    const wallboxGradient = EcfGaugeRing.gradient(arcWallbox, fadeWallbox, "#e65100", "#ffb74d", true);
+    const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", false);
+
+    // Static clock-face fill: 12 o'clock = 0%, sweeping clockwise to 100%.
+    const arcSoc = hasSoc ? clamp(soc! / 100, 0, 1) * 360 : 0;
+    const socGradient = hasSoc
+      ? `conic-gradient(from 0deg,` +
+        `#66bb6a 0deg,` +
+        `#66bb6a ${arcSoc.toFixed(1)}deg,` +
+        `rgba(255, 255, 255, 0.1) ${arcSoc.toFixed(1)}deg,` +
+        `rgba(255, 255, 255, 0.1) 360deg)`
+      : "transparent";
 
     const resa =
-      hasOuter && hasInner && p! > 0 ? Math.round((pb! / p!) * 100) : undefined;
+      hasWallbox && hasBattery && p! > 0 ? Math.round((pb! / p!) * 100) : undefined;
 
     const style = `
-      --ecf-outer-gradient: ${outerGradient};
-      --ecf-inner-gradient: ${innerGradient};
-      --ecf-outer-duration: ${durOuter}s;
-      --ecf-inner-duration: ${durInner}s;
+      --ecf-soc-gradient: ${socGradient};
+      --ecf-wallbox-gradient: ${wallboxGradient};
+      --ecf-battery-gradient: ${batteryGradient};
+      --ecf-wallbox-duration: ${durWallbox}s;
+      --ecf-battery-duration: ${durBattery}s;
     `;
 
     return html`
       <div class="ring" style=${style}>
+        <div class="ring-layer ring-soc"></div>
+        <div class="ring-layer ring-wallbox"></div>
+        <div class="ring-layer ring-battery"></div>
         <div class="label">
           ${soc !== undefined ? html`<div class="soc">${soc.toFixed(0)}%</div>` : nothing}
-          ${hasInner ? html`<div class="battery">${(pb! / 1000).toFixed(2)} kW</div>` : nothing}
-          ${hasOuter
+          ${hasBattery ? html`<div class="battery">${(pb! / 1000).toFixed(2)} kW</div>` : nothing}
+          ${hasWallbox
             ? html`<div class="wallbox">
                 ${(p! / 1000).toFixed(2)} kW${resa !== undefined ? html` · ${resa}%` : nothing}
               </div>`

@@ -697,7 +697,7 @@ var EcfGaugeRing = class extends i4 {
     this.entities = {};
     this.config = { type: "gauge" };
   }
-  /** Builds the tail-faded conic-gradient for one ring.
+  /** Builds the tail-faded conic-gradient for one of the two animated (power) rings.
    * `spinsClockwise` decides which end is the "head" (sharp, no fade):
    * for a clockwise sweep the head is at the *end* of the arc (higher
    * angle), for a counter-clockwise sweep it's the opposite — the fade
@@ -718,31 +718,38 @@ var EcfGaugeRing = class extends i4 {
     const pb = stateWatts(this.hass, e5.battery_power);
     const soc = stateNum(this.hass, e5.battery_soc);
     const maxP = resolveNumberOrEntity(this.hass, e5.wallbox_max, 7400);
-    const hasOuter = p3 !== void 0 && maxP > 0;
-    const hasInner = pb !== void 0 && maxP > 0;
-    const fracOuter = hasOuter ? clamp(p3 / maxP, 0, 1) : 0;
-    const fracInner = hasInner ? clamp(pb / maxP, 0, 1) : 0;
-    const arcOuter = fracOuter * 360;
-    const arcInner = fracInner * 360;
-    const fadeOuter = Math.min(arcOuter / 3, 30);
-    const fadeInner = Math.min(arcInner / 3, 30);
-    const durOuter = hasOuter && p3 > 0 ? 8 - 7.4 * fracOuter : 999;
-    const durInner = hasInner && pb > 0 ? 8 - 7.4 * fracInner : 999;
-    const outerGradient = EcfGaugeRing.gradient(arcOuter, fadeOuter, "#1b5e20", "#66bb6a", true);
-    const innerGradient = EcfGaugeRing.gradient(arcInner, fadeInner, "#e65100", "#ffb74d", false);
-    const resa = hasOuter && hasInner && p3 > 0 ? Math.round(pb / p3 * 100) : void 0;
+    const hasWallbox = p3 !== void 0 && maxP > 0;
+    const hasBattery = pb !== void 0 && maxP > 0;
+    const hasSoc = soc !== void 0;
+    const fracWallbox = hasWallbox ? clamp(p3 / maxP, 0, 1) : 0;
+    const fracBattery = hasBattery ? clamp(pb / maxP, 0, 1) : 0;
+    const arcWallbox = fracWallbox * 360;
+    const arcBattery = fracBattery * 360;
+    const fadeWallbox = Math.min(arcWallbox / 3, 30);
+    const fadeBattery = Math.min(arcBattery / 3, 30);
+    const durWallbox = hasWallbox && p3 > 0 ? 8 - 7.4 * fracWallbox : 999;
+    const durBattery = hasBattery && pb > 0 ? 8 - 7.4 * fracBattery : 999;
+    const wallboxGradient = EcfGaugeRing.gradient(arcWallbox, fadeWallbox, "#e65100", "#ffb74d", true);
+    const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", false);
+    const arcSoc = hasSoc ? clamp(soc / 100, 0, 1) * 360 : 0;
+    const socGradient = hasSoc ? `conic-gradient(from 0deg,#66bb6a 0deg,#66bb6a ${arcSoc.toFixed(1)}deg,rgba(255, 255, 255, 0.1) ${arcSoc.toFixed(1)}deg,rgba(255, 255, 255, 0.1) 360deg)` : "transparent";
+    const resa = hasWallbox && hasBattery && p3 > 0 ? Math.round(pb / p3 * 100) : void 0;
     const style = `
-      --ecf-outer-gradient: ${outerGradient};
-      --ecf-inner-gradient: ${innerGradient};
-      --ecf-outer-duration: ${durOuter}s;
-      --ecf-inner-duration: ${durInner}s;
+      --ecf-soc-gradient: ${socGradient};
+      --ecf-wallbox-gradient: ${wallboxGradient};
+      --ecf-battery-gradient: ${batteryGradient};
+      --ecf-wallbox-duration: ${durWallbox}s;
+      --ecf-battery-duration: ${durBattery}s;
     `;
     return b2`
       <div class="ring" style=${style}>
+        <div class="ring-layer ring-soc"></div>
+        <div class="ring-layer ring-wallbox"></div>
+        <div class="ring-layer ring-battery"></div>
         <div class="label">
           ${soc !== void 0 ? b2`<div class="soc">${soc.toFixed(0)}%</div>` : A}
-          ${hasInner ? b2`<div class="battery">${(pb / 1e3).toFixed(2)} kW</div>` : A}
-          ${hasOuter ? b2`<div class="wallbox">
+          ${hasBattery ? b2`<div class="battery">${(pb / 1e3).toFixed(2)} kW</div>` : A}
+          ${hasWallbox ? b2`<div class="wallbox">
                 ${(p3 / 1e3).toFixed(2)} kW${resa !== void 0 ? b2` · ${resa}%` : A}
               </div>` : A}
         </div>
@@ -758,8 +765,8 @@ EcfGaugeRing.styles = i`
     }
     .ring {
       position: relative;
-      width: 200px;
-      height: 200px;
+      width: 240px;
+      height: 240px;
       border-radius: 50%;
       background: var(--ecf-bg, #1c1c1c);
       display: flex;
@@ -767,22 +774,19 @@ EcfGaugeRing.styles = i`
       justify-content: center;
       overflow: hidden;
     }
-    .ring::before,
-    .ring::after {
-      content: "";
+    .ring-layer {
       position: absolute;
       inset: 0;
       border-radius: 50%;
     }
-    .ring::before {
-      background: var(--ecf-outer-gradient);
+    .ring-soc {
+      background: var(--ecf-soc-gradient);
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 14px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 14px));
-      animation: ecf-spin var(--ecf-outer-duration, 999s) linear infinite;
       z-index: 0;
     }
-    .ring::after {
-      background: var(--ecf-inner-gradient);
+    .ring-wallbox {
+      background: var(--ecf-wallbox-gradient);
       -webkit-mask: radial-gradient(
         farthest-side,
         transparent calc(100% - 34px),
@@ -797,8 +801,27 @@ EcfGaugeRing.styles = i`
         #000 calc(100% - 20px),
         transparent calc(100% - 20px)
       );
-      animation: ecf-spin-rev var(--ecf-inner-duration, 999s) linear infinite;
+      animation: ecf-spin var(--ecf-wallbox-duration, 999s) linear infinite;
       z-index: 1;
+    }
+    .ring-battery {
+      background: var(--ecf-battery-gradient);
+      -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 54px),
+        #000 calc(100% - 54px),
+        #000 calc(100% - 40px),
+        transparent calc(100% - 40px)
+      );
+      mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 54px),
+        #000 calc(100% - 54px),
+        #000 calc(100% - 40px),
+        transparent calc(100% - 40px)
+      );
+      animation: ecf-spin-rev var(--ecf-battery-duration, 999s) linear infinite;
+      z-index: 2;
     }
     @keyframes ecf-spin {
       from {
@@ -818,7 +841,7 @@ EcfGaugeRing.styles = i`
     }
     .label {
       position: relative;
-      z-index: 2;
+      z-index: 3;
       text-align: center;
       font-family: var(--paper-font-body1_-_font-family, inherit);
     }
@@ -831,13 +854,13 @@ EcfGaugeRing.styles = i`
     .battery {
       font-size: 26px;
       font-weight: bold;
-      color: var(--ecf-inner-bright, #66bb6a);
+      color: var(--ecf-battery-text, #66bb6a);
       line-height: 1.2;
     }
     .wallbox {
       font-size: 15px;
       font-weight: bold;
-      color: var(--ecf-outer-bright, #ff9800);
+      color: var(--ecf-wallbox-text, #ff9800);
       line-height: 1.2;
       margin-top: 2px;
     }
@@ -1242,7 +1265,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.5.0";
+var CARD_VERSION = "0.6.0";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {
