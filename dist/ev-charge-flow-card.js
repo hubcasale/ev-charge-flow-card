@@ -751,18 +751,19 @@ var EcfGaugeRing = class extends i4 {
       stroke-linecap="round"
     />`;
   }
-  /** The pointer + label at the current SOC value. */
+  /** The pointer + label at the current SOC value. The label sits right
+   * before the arrow (counter-clockwise of it) and tangent to the ring, so
+   * it reads along the curve instead of overlapping the arrow. */
   static socPointer(socPct) {
     const deg = clamp(socPct, 0, 100) * 3.6;
     const tip = polar(RING_R - 2, deg);
     const baseL = polar(RING_R + 14, deg - 5);
     const baseR = polar(RING_R + 14, deg + 5);
-    const labelPt = polar(RING_R + 10, deg);
-    const near = (target) => {
-      const d3 = Math.abs((deg - target + 540) % 360 - 180);
-      return d3 < 30;
-    };
-    const dy = near(0) ? -6 : near(180) ? 10 : 5;
+    const labelAngle = ((deg - 8) % 360 + 360) % 360;
+    const labelPt = polar(RING_R + 7, labelAngle);
+    const flip = labelAngle > 90 && labelAngle < 270;
+    const rotation = flip ? labelAngle + 180 : labelAngle;
+    const anchor = flip ? "start" : "end";
     return w`
       <polygon
         points="${tip.x},${tip.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}"
@@ -772,9 +773,11 @@ var EcfGaugeRing = class extends i4 {
       />
       <text
         x=${labelPt.x}
-        y=${labelPt.y + dy}
-        text-anchor="middle"
-        font-size="12"
+        y=${labelPt.y}
+        dy="4"
+        text-anchor=${anchor}
+        transform="rotate(${rotation} ${labelPt.x} ${labelPt.y})"
+        font-size="15"
         font-weight="700"
         fill="#ffffff"
       >
@@ -1358,7 +1361,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.7.0";
+var CARD_VERSION = "0.7.1";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {

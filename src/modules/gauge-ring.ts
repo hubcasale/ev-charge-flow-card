@@ -239,18 +239,22 @@ export class EcfGaugeRing extends LitElement {
     />`;
   }
 
-  /** The pointer + label at the current SOC value. */
+  /** The pointer + label at the current SOC value. The label sits right
+   * before the arrow (counter-clockwise of it) and tangent to the ring, so
+   * it reads along the curve instead of overlapping the arrow. */
   private static socPointer(socPct: number) {
     const deg = clamp(socPct, 0, 100) * 3.6;
     const tip = polar(RING_R - 2, deg);
     const baseL = polar(RING_R + 14, deg - 5);
     const baseR = polar(RING_R + 14, deg + 5);
-    const labelPt = polar(RING_R + 10, deg);
-    const near = (target: number) => {
-      const d = Math.abs(((deg - target + 540) % 360) - 180);
-      return d < 30;
-    };
-    const dy = near(0) ? -6 : near(180) ? 10 : 5;
+    // A few degrees back from the arrow so the label never crowds it.
+    const labelAngle = ((deg - 8) % 360 + 360) % 360;
+    const labelPt = polar(RING_R + 7, labelAngle);
+    // A label rotated to follow the ring reads upside down on the bottom
+    // half unless flipped 180°, which also flips which side is "before".
+    const flip = labelAngle > 90 && labelAngle < 270;
+    const rotation = flip ? labelAngle + 180 : labelAngle;
+    const anchor = flip ? "start" : "end";
     return svg`
       <polygon
         points="${tip.x},${tip.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}"
@@ -260,9 +264,11 @@ export class EcfGaugeRing extends LitElement {
       />
       <text
         x=${labelPt.x}
-        y=${labelPt.y + dy}
-        text-anchor="middle"
-        font-size="12"
+        y=${labelPt.y}
+        dy="4"
+        text-anchor=${anchor}
+        transform="rotate(${rotation} ${labelPt.x} ${labelPt.y})"
+        font-size="15"
         font-weight="700"
         fill="#ffffff"
       >
