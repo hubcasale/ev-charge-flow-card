@@ -90,10 +90,31 @@ export class EvChargeFlowCardEditor extends LitElement {
       color: var(--secondary-text-color);
       margin: -4px 0 6px;
     }
-    ha-entity-picker,
-    ha-textfield {
+    ha-entity-picker {
       display: block;
       margin-bottom: 8px;
+    }
+    .field-label {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      margin: 4px 0 2px;
+    }
+    .plain-input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--primary-text-color);
+      background: var(--card-background-color, #1c1c1c);
+      border: 1px solid var(--divider-color, #444);
+      border-radius: 4px;
+    }
+    .plain-input:focus {
+      outline: none;
+      border-color: var(--primary-color, #03a9f4);
     }
     .module-row {
       display: flex;
@@ -148,12 +169,14 @@ export class EvChargeFlowCardEditor extends LitElement {
       ${ENTITY_FIELDS.map((f) =>
         f.numberOrEntity
           ? html`
-              <ha-textfield
-                .label=${f.label}
+              <div class="field-label">${f.label}</div>
+              <input
+                class="plain-input"
+                type="text"
                 .value=${String(entities[f.key] ?? "")}
                 @change=${(e: Event) =>
                   this._numberOrEntityChanged(f.key, (e.target as HTMLInputElement).value)}
-              ></ha-textfield>
+              />
             `
           : html`
               ${f.hint ? html`<div class="hint">${f.hint}</div>` : nothing}

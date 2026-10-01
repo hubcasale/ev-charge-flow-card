@@ -1266,11 +1266,13 @@ var EvChargeFlowCardEditor = class extends i4 {
       <div class="section">Entità</div>
       ${ENTITY_FIELDS.map(
       (f3) => f3.numberOrEntity ? b2`
-              <ha-textfield
-                .label=${f3.label}
+              <div class="field-label">${f3.label}</div>
+              <input
+                class="plain-input"
+                type="text"
                 .value=${String(entities[f3.key] ?? "")}
                 @change=${(e5) => this._numberOrEntityChanged(f3.key, e5.target.value)}
-              ></ha-textfield>
+              />
             ` : b2`
               ${f3.hint ? b2`<div class="hint">${f3.hint}</div>` : A}
               <ha-entity-picker
@@ -1322,10 +1324,31 @@ EvChargeFlowCardEditor.styles = i`
       color: var(--secondary-text-color);
       margin: -4px 0 6px;
     }
-    ha-entity-picker,
-    ha-textfield {
+    ha-entity-picker {
       display: block;
       margin-bottom: 8px;
+    }
+    .field-label {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      margin: 4px 0 2px;
+    }
+    .plain-input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--primary-text-color);
+      background: var(--card-background-color, #1c1c1c);
+      border: 1px solid var(--divider-color, #444);
+      border-radius: 4px;
+    }
+    .plain-input:focus {
+      outline: none;
+      border-color: var(--primary-color, #03a9f4);
     }
     .module-row {
       display: flex;
@@ -1361,7 +1384,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.7.1";
+var CARD_VERSION = "0.7.2";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {
