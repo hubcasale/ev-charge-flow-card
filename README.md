@@ -54,6 +54,9 @@ entities:
   battery_power: sensor.my_car_charge_power
   # Car's state of charge, in %.
   battery_soc: sensor.my_car_battery
+  # Car's preset charge limit, in % — a literal number or an entity id.
+  # Marked on the SOC ring as a bold yellow tick, if set.
+  charge_limit: sensor.my_car_charge_limit
   session_energy: sensor.my_wallbox_session_energy
   session_time: sensor.my_wallbox_session_time
   session_cost: sensor.my_wallbox_session_cost # or omit and set a price instead:
@@ -86,15 +89,18 @@ drag-and-drop, for reliability across mouse, trackpad and touch alike.
 ### The gauge, briefly
 
 Three concentric rings. The outermost (green) is the battery's state of
-charge — a plain clock-face fill, 12 o'clock is 0%, sweeping clockwise to
-100%, static (no spin). The middle (orange) and inner (yellow) rings are
-the wallbox draw and what's actually reaching the battery: each an arc
-whose length is `power / wallbox_max` (a full circle at max power) and
-whose rotation speed also scales with power — faster spin, more power right
-now. The gap between how far the two power arcs reach is, visually, the
-conversion loss between them. Centre reads, top to bottom: battery %, power
-reaching the battery (big), wallbox power and the resulting efficiency %
-(small).
+charge — a clock-face fill, 12 o'clock is 0%, sweeping clockwise to 100%,
+static (no spin), with a tick every 10% and a pointer + label at the
+current value. If `charge_limit` is set, it's marked with a bold yellow
+tick of its own. The middle (orange) and inner (yellow) rings are the
+wallbox draw and what's actually reaching the battery: each an arc whose
+length is `power / wallbox_max` (a full circle at max power). Both spin
+clockwise, in phase, at one shared speed (driven by wallbox power) — so
+their tails stay together as they rotate and the gap between how far each
+reaches stays readable throughout the spin, not just when stopped; that
+gap is, visually, the conversion loss between the two. Centre reads, top
+to bottom: battery %, power reaching the battery (big), wallbox power and
+the resulting efficiency % (small).
 
 ### The stats grid, briefly
 

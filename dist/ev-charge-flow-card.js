@@ -691,6 +691,14 @@ function currencyIcon(hass) {
 }
 
 // src/modules/gauge-ring.ts
+var RING_R = 120;
+var OVERLAY_R = 150;
+var OVERLAY_BOX = OVERLAY_R * 2;
+var OVERLAY_CENTER = OVERLAY_R;
+function polar(r6, angleDeg) {
+  const rad = (angleDeg - 90) * Math.PI / 180;
+  return { x: OVERLAY_CENTER + r6 * Math.cos(rad), y: OVERLAY_CENTER + r6 * Math.sin(rad) };
+}
 var EcfGaugeRing = class extends i4 {
   constructor() {
     super(...arguments);
@@ -711,6 +719,69 @@ var EcfGaugeRing = class extends i4 {
     }
     return `conic-gradient(from 0deg,${dark} 0deg,${bright} ${mid}deg,${dark} ${(arcDeg - fadeDeg).toFixed(1)}deg,transparent ${a3}deg,transparent 360deg)`;
   }
+  /** The 10%-step tick marks around the SOC ring, like a clock face. */
+  static ticks() {
+    const r1 = RING_R;
+    const r22 = RING_R + 9;
+    return Array.from({ length: 10 }, (_2, i5) => i5 * 36).map((deg) => {
+      const a3 = polar(r1, deg);
+      const b3 = polar(r22, deg);
+      return w`<line
+        x1=${a3.x}
+        y1=${a3.y}
+        x2=${b3.x}
+        y2=${b3.y}
+        stroke="rgba(255,255,255,0.45)"
+        stroke-width="1.5"
+      />`;
+    });
+  }
+  /** The bold tick marking the car's preset charge-limit, if configured. */
+  static limitMarker(limitPct) {
+    const deg = clamp(limitPct, 0, 100) * 3.6;
+    const a3 = polar(RING_R - 17, deg);
+    const b3 = polar(RING_R + 13, deg);
+    return w`<line
+      x1=${a3.x}
+      y1=${a3.y}
+      x2=${b3.x}
+      y2=${b3.y}
+      stroke="#ffd600"
+      stroke-width="4"
+      stroke-linecap="round"
+    />`;
+  }
+  /** The pointer + label at the current SOC value. */
+  static socPointer(socPct) {
+    const deg = clamp(socPct, 0, 100) * 3.6;
+    const tip = polar(RING_R - 2, deg);
+    const baseL = polar(RING_R + 14, deg - 5);
+    const baseR = polar(RING_R + 14, deg + 5);
+    const labelPt = polar(RING_R + 10, deg);
+    const near = (target) => {
+      const d3 = Math.abs((deg - target + 540) % 360 - 180);
+      return d3 < 30;
+    };
+    const dy = near(0) ? -6 : near(180) ? 10 : 5;
+    return w`
+      <polygon
+        points="${tip.x},${tip.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}"
+        fill="#ffffff"
+        stroke="#1c1c1c"
+        stroke-width="0.75"
+      />
+      <text
+        x=${labelPt.x}
+        y=${labelPt.y + dy}
+        text-anchor="middle"
+        font-size="12"
+        font-weight="700"
+        fill="#ffffff"
+      >
+        ${socPct.toFixed(0)}%
+      </text>
+    `;
+  }
   render() {
     if (!this.hass) return A;
     const e5 = this.entities;
@@ -718,6 +789,7 @@ var EcfGaugeRing = class extends i4 {
     const pb = stateWatts(this.hass, e5.battery_power);
     const soc = stateNum(this.hass, e5.battery_soc);
     const maxP = resolveNumberOrEntity(this.hass, e5.wallbox_max, 7400);
+    const chargeLimit = resolveNumberOrEntityRaw(this.hass, e5.charge_limit, void 0);
     const hasWallbox = p3 !== void 0 && maxP > 0;
     const hasBattery = pb !== void 0 && maxP > 0;
     const hasSoc = soc !== void 0;
@@ -727,8 +799,9 @@ var EcfGaugeRing = class extends i4 {
     const arcBattery = fracBattery * 360;
     const fadeWallbox = Math.min(arcWallbox / 3, 30);
     const fadeBattery = Math.min(arcBattery / 3, 30);
-    const durWallbox = hasWallbox && p3 > 0 ? 8 - 7.4 * fracWallbox : 999;
-    const durBattery = hasBattery && pb > 0 ? 8 - 7.4 * fracBattery : 999;
+    const isActive = hasWallbox && p3 > 0 || hasBattery && pb > 0;
+    const sharedFrac = hasWallbox ? fracWallbox : fracBattery;
+    const sharedDuration = isActive ? 8 - 7.4 * sharedFrac : 999;
     const wallboxGradient = EcfGaugeRing.gradient(arcWallbox, fadeWallbox, "#e65100", "#ffb74d", true);
     const batteryGradient = EcfGaugeRing.gradient(arcBattery, fadeBattery, "#f57f17", "#ffee58", true);
     const arcSoc = hasSoc ? clamp(soc / 100, 0, 1) * 360 : 0;
@@ -738,21 +811,30 @@ var EcfGaugeRing = class extends i4 {
       --ecf-soc-gradient: ${socGradient};
       --ecf-wallbox-gradient: ${wallboxGradient};
       --ecf-battery-gradient: ${batteryGradient};
-      --ecf-wallbox-duration: ${durWallbox}s;
-      --ecf-battery-duration: ${durBattery}s;
+      --ecf-wallbox-duration: ${sharedDuration}s;
+      --ecf-battery-duration: ${sharedDuration}s;
     `;
     return b2`
-      <div class="ring" style=${style}>
-        <div class="ring-layer ring-soc"></div>
-        <div class="ring-layer ring-wallbox"></div>
-        <div class="ring-layer ring-battery"></div>
-        <div class="label">
-          ${soc !== void 0 ? b2`<div class="soc">${soc.toFixed(0)}%</div>` : A}
-          ${hasBattery ? b2`<div class="battery">${(pb / 1e3).toFixed(2)} kW</div>` : A}
-          ${hasWallbox ? b2`<div class="wallbox">
-                ${(p3 / 1e3).toFixed(2)} kW${resa !== void 0 ? b2` · ${resa}%` : A}
-              </div>` : A}
+      <div class="ring-wrap">
+        <div class="ring" style=${style}>
+          <div class="ring-layer ring-soc"></div>
+          <div class="ring-layer ring-wallbox"></div>
+          <div class="ring-layer ring-battery"></div>
+          <div class="label">
+            ${soc !== void 0 ? b2`<div class="soc">${soc.toFixed(0)}%</div>` : A}
+            ${hasBattery ? b2`<div class="battery">${(pb / 1e3).toFixed(2)} kW</div>` : A}
+            ${hasWallbox ? b2`<div class="wallbox">
+                  ${(p3 / 1e3).toFixed(2)} kW${resa !== void 0 ? b2` · ${resa}%` : A}
+                </div>` : A}
+          </div>
         </div>
+        ${hasSoc ? w`
+              <svg class="overlay" viewBox="0 0 ${OVERLAY_BOX} ${OVERLAY_BOX}">
+                ${EcfGaugeRing.ticks()}
+                ${chargeLimit !== void 0 ? EcfGaugeRing.limitMarker(chargeLimit) : A}
+                ${EcfGaugeRing.socPointer(soc)}
+              </svg>
+            ` : A}
       </div>
     `;
   }
@@ -762,6 +844,15 @@ EcfGaugeRing.styles = i`
       display: flex;
       justify-content: center;
       padding: 8px 0;
+    }
+    .ring-wrap {
+      position: relative;
+      width: ${OVERLAY_BOX}px;
+      height: ${OVERLAY_BOX}px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .ring {
       position: relative;
@@ -773,6 +864,11 @@ EcfGaugeRing.styles = i`
       align-items: center;
       justify-content: center;
       overflow: hidden;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
     }
     .ring-layer {
       position: absolute;
@@ -1098,6 +1194,11 @@ var ENTITY_FIELDS = [
   { key: "wallbox_max", label: "Potenza massima wallbox (W, o id entit\xE0)", numberOrEntity: true },
   { key: "battery_power", label: "Potenza alla batteria" },
   { key: "battery_soc", label: "Percentuale batteria" },
+  {
+    key: "charge_limit",
+    label: "Limite di ricarica preimpostato (%, o id entit\xE0)",
+    numberOrEntity: true
+  },
   { key: "session_energy", label: "Energia sessione" },
   { key: "session_time", label: "Tempo sessione" },
   { key: "session_cost", label: "Costo sessione (se gi\xE0 calcolato)" },
@@ -1257,7 +1358,7 @@ var DEFAULT_MODULES = [
 
 // src/ev-charge-flow-card.ts
 var CARD_TAG = "ev-charge-flow-card";
-var CARD_VERSION = "0.6.1";
+var CARD_VERSION = "0.7.0";
 var EvChargeFlowCard = class extends i4 {
   setConfig(config) {
     if (!config || typeof config !== "object") {

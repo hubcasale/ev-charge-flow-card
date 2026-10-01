@@ -28,6 +28,9 @@ export interface EntitiesConfig {
   battery_power?: string;
   /** Car's battery state of charge (%). */
   battery_soc?: string;
+  /** Car's preset charge limit (%) — a number or an entity id. Marked on the
+   * SOC ring as a bold tick, if set. */
+  charge_limit?: string | number;
   /** Energy delivered this session (kWh). */
   session_energy?: string;
   /** Charging duration, in seconds, this session. */

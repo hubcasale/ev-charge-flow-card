@@ -26,6 +26,11 @@ const ENTITY_FIELDS: EntityField[] = [
   { key: "wallbox_max", label: "Potenza massima wallbox (W, o id entità)", numberOrEntity: true },
   { key: "battery_power", label: "Potenza alla batteria" },
   { key: "battery_soc", label: "Percentuale batteria" },
+  {
+    key: "charge_limit",
+    label: "Limite di ricarica preimpostato (%, o id entità)",
+    numberOrEntity: true,
+  },
   { key: "session_energy", label: "Energia sessione" },
   { key: "session_time", label: "Tempo sessione" },
   { key: "session_cost", label: "Costo sessione (se già calcolato)" },

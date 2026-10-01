@@ -8,7 +8,7 @@
   .controls { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 24px; max-width: 640px; }
   label { display: block; font-size: 13px; margin-bottom: 4px; }
   input[type="range"] { width: 220px; }
-  .card-holder { width: 260px; }
+  .card-holder { width: 320px; }
   code { color: #9cf; }
 </style>
 </head>
@@ -51,6 +51,10 @@
       <label>Batteria casa (W, negativo = in carica): <span id="hbatOut">-1000</span></label>
       <input id="hbat" type="range" min="-4000" max="4000" value="-1000" />
     </div>
+    <div>
+      <label>Limite di ricarica (%): <span id="limitOut">80</span></label>
+      <input id="limit" type="range" min="0" max="100" value="80" />
+    </div>
   </div>
 
   <div class="card-holder">
@@ -74,6 +78,7 @@
         solar_power: "sensor.demo_solar_power",
         grid_power: "sensor.demo_grid_power",
         home_battery_power: "sensor.demo_home_battery_power",
+        charge_limit: "sensor.demo_charge_limit",
       },
       modules: [
         { type: "gauge", enabled: true },
@@ -91,6 +96,8 @@
       const solar = document.getElementById("solar").value;
       const grid = document.getElementById("grid").value;
       const hbat = document.getElementById("hbat").value;
+      const limit = document.getElementById("limit").value;
+      document.getElementById("limitOut").textContent = limit;
       document.getElementById("pOut").textContent = p;
       document.getElementById("pbOut").textContent = pb;
       document.getElementById("socOut").textContent = soc;
@@ -110,6 +117,7 @@
           "sensor.demo_solar_power": { entity_id: "sensor.demo_solar_power", state: String(solar), attributes: { unit_of_measurement: "W" } },
           "sensor.demo_grid_power": { entity_id: "sensor.demo_grid_power", state: String(grid), attributes: { unit_of_measurement: "W" } },
           "sensor.demo_home_battery_power": { entity_id: "sensor.demo_home_battery_power", state: String(hbat), attributes: { unit_of_measurement: "W" } },
+          "sensor.demo_charge_limit": { entity_id: "sensor.demo_charge_limit", state: String(limit), attributes: { unit_of_measurement: "%" } },
         },
       };
     }
@@ -117,7 +125,7 @@
     function refresh() {
       card.hass = mockHass();
     }
-    ["p", "pb", "soc", "energy", "time", "solar", "grid", "hbat"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
+    ["p", "pb", "soc", "energy", "time", "solar", "grid", "hbat", "limit"].forEach((id) => document.getElementById(id).addEventListener("input", refresh));
     refresh();
   </script>
 </body>
